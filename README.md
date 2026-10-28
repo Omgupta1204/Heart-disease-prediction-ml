@@ -174,8 +174,8 @@ Add your actual test-set results here after verifying them in your notebook.
 
 | Metric    | Result             |
 | --------- | ------------------ |
-| Accuracy  | Add measured value |
-| Precision | Add measured value |
-| Recall    | Add measured value |
-| F1-score  | Add measured value |
+| Accuracy  | 96.87% |
+| Precision | 96.99% |
+| Recall    | 96.87% |
+| F1-score  | 96.87% |
 

@@ -1,0 +1,116 @@
+
+from flask import Flask, request, render_template
+import pickle
+import numpy as np
+from pathlib import Path
+
+app = Flask(__name__)
+
+# Get the folder where app.py is saved
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_DIR = BASE_DIR / "Models"
+
+# Load the saved model and scaler
+with open(MODEL_DIR / "rf_classifier.pkl", "rb") as f:
+    model = pickle.load(f)
+
+with open(MODEL_DIR / "scaler.pkl", "rb") as f:
+    scaler = pickle.load(f)
+
+
+def predict(
+    male, age, currentSmoker, cigsPerDay, BPMeds,
+    prevalentStroke, prevalentHyp, diabetes, totChol,
+    sysBP, diaBP, BMI, heartRate, glucose
+):
+    # HTML dropdowns send 1 or 0 as strings.
+    # Convert them to numeric values.
+    features = np.array([[
+        int(male),
+        float(age),
+        int(currentSmoker),
+        float(cigsPerDay),
+        int(BPMeds),
+        int(prevalentStroke),
+        int(prevalentHyp),
+        int(diabetes),
+        float(totChol),
+        float(sysBP),
+        float(diaBP),
+        float(BMI),
+        float(heartRate),
+        float(glucose)
+    ]])
+
+    # Apply the same fitted scaler used during training
+    scaled_features = scaler.transform(features)
+
+    # Make prediction
+    result = model.predict(scaled_features)
+
+    return int(result[0])
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/pred", methods=["POST"])
+def predict_route():
+    try:
+        # Read form inputs
+        male = request.form["male"]
+        age = request.form["age"]
+        currentSmoker = request.form["currentSmoker"]
+        cigsPerDay = request.form["cigsPerDay"]
+        BPMeds = request.form["BPMeds"]
+        prevalentStroke = request.form["prevalentStroke"]
+        prevalentHyp = request.form["prevalentHyp"]
+        diabetes = request.form["diabetes"]
+        totChol = request.form["totChol"]
+        sysBP = request.form["sysBP"]
+        diaBP = request.form["diaBP"]
+        BMI = request.form["BMI"]
+        heartRate = request.form["heartRate"]
+        glucose = request.form["glucose"]
+
+        # Check for missing values
+        values = [
+            age, cigsPerDay, totChol, sysBP, diaBP,
+            BMI, heartRate, glucose
+        ]
+
+        if any(value.strip() == "" for value in values):
+            return render_template(
+                "index.html",
+                error="Please fill in all numeric fields."
+            )
+
+        # Predict
+        prediction = predict(
+            male, age, currentSmoker, cigsPerDay, BPMeds,
+            prevalentStroke, prevalentHyp, diabetes, totChol,
+            sysBP, diaBP, BMI, heartRate, glucose
+        )
+
+        prediction_text = (
+            "The Patient Has Heart Disease"
+            if prediction == 1
+            else "The patient Has No Heart Disease"
+        )
+
+        return render_template(
+            "index.html",
+            prediction=prediction_text
+        )
+
+    except (ValueError, KeyError) as e:
+        return render_template(
+            "index.html",
+            error=f"Invalid or missing input: {e}"
+        )
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
